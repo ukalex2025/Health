@@ -39,6 +39,7 @@
             padding: 10px;
             min-height: 100vh;
             touch-action: manipulation;
+            padding-bottom: 100px;
         }
 
         .app-header {
@@ -332,18 +333,20 @@
         }
 
         .action-bar {
-            position: sticky;
+            position: fixed;
             bottom: 0;
+            left: 0;
+            right: 0;
             background: var(--glass-bg);
             backdrop-filter: var(--blur);
-            border-radius: 16px;
-            border: 1px solid var(--glass-border);
+            border-top: 1px solid var(--glass-border);
             padding: 16px;
-            margin-top: 20px;
             display: flex;
             gap: 12px;
             justify-content: space-between;
             flex-wrap: wrap;
+            z-index: 1000;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
         }
 
         .primary-btn {
@@ -1024,8 +1027,7 @@
     </div>
 
     <div class="action-bar">
-        <button class="secondary-btn" onclick="copyLastEntry()">📋 Copy Last</button>
-        <button class="primary-btn" onclick="saveEntry()">💾 Save Entry</button>
+        <button class="secondary-btn" onclick="saveEntry()">💾 Save Entry</button>
         <button class="secondary-btn" onclick="exportData()">📤 Export</button>
         <button class="secondary-btn" onclick="generateReport()">📄 PDF Report</button>
     </div>
@@ -1483,9 +1485,9 @@
             // Get current date for filtering - ONLY today's data
             const currentDate = new Date().toISOString().split('T')[0];
             
-            // Only export current day's data
-            const filteredEntries = entries.filter(entry => entry.date === currentDate);
-            if (filteredEntries.length === 0) {
+            // Check if the saved entry is for today
+            const todayEntry = entries[0]; // Only one entry exists
+            if (todayEntry.date !== currentDate) {
                 showToast('No entries found for today', 'error');
                 return;
             }
@@ -1509,154 +1511,154 @@
             doc.text(`Today's Entry`, margin, yPosition);
             yPosition += 20;
             
-            // Process entries
-            filteredEntries.forEach((entry, index) => {
-                if (yPosition > pageHeight - 150) {
-                    doc.addPage();
-                    yPosition = 20;
+            // Process the single entry
+            const entry = todayEntry;
+            
+            // Check if we need a new page
+            if (yPosition > pageHeight - 150) {
+                doc.addPage();
+                yPosition = 20;
+            }
+            
+            // Entry header
+            doc.setFontSize(14);
+            doc.text(`${new Date(entry.date).toLocaleDateString()} - ${entry.tag}`, margin, yPosition);
+            yPosition += 10;
+            
+            doc.setFontSize(10);
+            
+            // Basic info
+            doc.text(`Protocol: ${entry.protocol}`, margin, yPosition);
+            yPosition += 8;
+            
+            // Sleep
+            if (entry.sleepHours || entry.sleepMinutes || entry.sleepQuality) {
+                const sleepTime = formatSleepTime(entry.sleepHours, entry.sleepMinutes);
+                const sleepDisplay = sleepTime ? `${sleepTime} (${entry.sleepQuality || 'No quality'})` : `No time data (${entry.sleepQuality || 'No quality'})`;
+                doc.text(`Sleep: ${sleepDisplay}`, margin, yPosition);
+                yPosition += 8;
+            }
+            
+            // Body metrics
+            if (entry.weight || entry.bodyFat || entry.restingHr) {
+                doc.text(`Body: ${entry.weight}kg, ${entry.bodyFat}% BF, ${entry.restingHr} RHR`, margin, yPosition);
+                yPosition += 8;
+            }
+            
+            // Nutrition
+            if (entry.water || entry.breakfast || entry.lunch || entry.dinner) {
+                doc.text(`Nutrition: ${entry.water}L water, ${entry.portionControl} portions, ${entry.gutStatus} gut`, margin, yPosition);
+                yPosition += 8;
+                if (entry.breakfast) {
+                    doc.text(`  Breakfast: ${entry.breakfast}`, margin, yPosition);
+                    yPosition += 8;
                 }
-                
-                doc.setFontSize(14);
-                doc.text(`${new Date(entry.date).toLocaleDateString()} - ${entry.tag}`, margin, yPosition);
-                yPosition += 10;
-                
-                doc.setFontSize(10);
-                
-                // Basic info
-                doc.text(`Protocol: ${entry.protocol}`, margin, yPosition);
+                if (entry.lunch) {
+                    doc.text(`  Lunch: ${entry.lunch}`, margin, yPosition);
+                    yPosition += 8;
+                }
+                if (entry.dinner) {
+                    doc.text(`  Dinner: ${entry.dinner}`, margin, yPosition);
+                    yPosition += 8;
+                }
+            }
+            
+            // Supplements
+            if (entry.supplements || entry.otherSupplements) {
+                doc.text(`Supplements: ${entry.supplements || ''} ${entry.otherSupplements || ''}`, margin, yPosition);
+                yPosition += 8;
+            }
+            
+            // Training
+            if (entry.trainingType && entry.trainingType !== 'None') {
+                doc.text(`Training: ${entry.trainingType} (${entry.duration}min, ${entry.intensity} intensity, ${entry.quality} quality)`, margin, yPosition);
+                yPosition += 8;
+                if (entry.steps) {
+                    doc.text(`  Steps: ${entry.steps}`, margin, yPosition);
+                    yPosition += 8;
+                }
+            }
+            
+            // Mental health
+            if (entry.mood || entry.stress || entry.mentalHealth) {
+                doc.text(`Mental: Mood ${entry.mood}/10, Stress ${entry.stress}/10, ${entry.mentalHealth}`, margin, yPosition);
+                yPosition += 8;
+                if (entry.moodTriggers && entry.moodTriggers !== 'None') {
+                    doc.text(`  Triggers: ${entry.moodTriggers}`, margin, yPosition);
+                    yPosition += 8;
+                }
+            }
+            
+            // Activities
+            if (entry.outdoors || entry.coldExposure || entry.dogWalk) {
+                doc.text(`Activities: ${entry.outdoors}min outdoors, ${entry.coldExposure}min cold, ${entry.dogWalk}min dog walk`, margin, yPosition);
+                yPosition += 8;
+            }
+            
+            // Extras
+            if (entry.alcohol || entry.weedJoints || entry.weedBongs) {
+                doc.text(`Substances: ${entry.alcohol} alcohol units, ${entry.weedJoints} joints, ${entry.weedBongs} bongs`, margin, yPosition);
+                yPosition += 8;
+            }
+            
+            // Notes
+            if (entry.sleepNotes || entry.memoryNotes || entry.gratitude || entry.journalNotes) {
+                doc.text('Notes:', margin, yPosition);
+                yPosition += 8;
+                if (entry.sleepNotes) {
+                    const sleepLines = doc.splitTextToSize(`Sleep: ${entry.sleepNotes}`, 150);
+                    doc.text(sleepLines, margin + 5, yPosition);
+                    yPosition += sleepLines.length * 6;
+                }
+                if (entry.memoryNotes) {
+                    const memoryLines = doc.splitTextToSize(`Memory: ${entry.memoryNotes}`, 150);
+                    doc.text(memoryLines, margin + 5, yPosition);
+                    yPosition += memoryLines.length * 6;
+                }
+                if (entry.gratitude) {
+                    const gratitudeLines = doc.splitTextToSize(`Gratitude: ${entry.gratitude}`, 150);
+                    doc.text(gratitudeLines, margin + 5, yPosition);
+                    yPosition += gratitudeLines.length * 6;
+                }
+                if (entry.journalNotes) {
+                    const journalLines = doc.splitTextToSize(`Journal: ${entry.journalNotes}`, 150);
+                    doc.text(journalLines, margin + 5, yPosition);
+                    yPosition += journalLines.length * 6;
+                }
+            }
+            
+            // Add images
+            const allImages = [
+                ...entry.images.sleep.map(img => ({...img, category: 'Sleep'})),
+                ...entry.images.heart.map(img => ({...img, category: 'Heart'})),
+                ...entry.images.exercise.map(img => ({...img, category: 'Exercise'})),
+                ...entry.images.other.map(img => ({...img, category: 'Other'}))
+            ];
+            
+            if (allImages.length > 0) {
+                doc.text('Screenshots:', margin, yPosition);
                 yPosition += 8;
                 
-                // Sleep
-                if (entry.sleepHours || entry.sleepMinutes || entry.sleepQuality) {
-                    const sleepTime = formatSleepTime(entry.sleepHours, entry.sleepMinutes);
-                    const sleepDisplay = sleepTime ? `${sleepTime} (${entry.sleepQuality || 'No quality'})` : `No time data (${entry.sleepQuality || 'No quality'})`;
-                    doc.text(`Sleep: ${sleepDisplay}`, margin, yPosition);
-                    yPosition += 8;
-                }
-                
-                // Body metrics
-                if (entry.weight || entry.bodyFat || entry.restingHr) {
-                    doc.text(`Body: ${entry.weight}kg, ${entry.bodyFat}% BF, ${entry.restingHr} RHR`, margin, yPosition);
-                    yPosition += 8;
-                }
-                
-                // Nutrition
-                if (entry.water || entry.breakfast || entry.lunch || entry.dinner) {
-                    doc.text(`Nutrition: ${entry.water}L water, ${entry.portionControl} portions, ${entry.gutStatus} gut`, margin, yPosition);
-                    yPosition += 8;
-                    if (entry.breakfast) {
-                        doc.text(`  Breakfast: ${entry.breakfast}`, margin, yPosition);
-                        yPosition += 8;
+                allImages.forEach(image => {
+                    if (yPosition > pageHeight - 80) {
+                        doc.addPage();
+                        yPosition = 20;
                     }
-                    if (entry.lunch) {
-                        doc.text(`  Lunch: ${entry.lunch}`, margin, yPosition);
-                        yPosition += 8;
-                    }
-                    if (entry.dinner) {
-                        doc.text(`  Dinner: ${entry.dinner}`, margin, yPosition);
-                        yPosition += 8;
-                    }
-                }
-                
-                // Supplements
-                if (entry.supplements || entry.otherSupplements) {
-                    doc.text(`Supplements: ${entry.supplements || ''} ${entry.otherSupplements || ''}`, margin, yPosition);
-                    yPosition += 8;
-                }
-                
-                // Training
-                if (entry.trainingType && entry.trainingType !== 'None') {
-                    doc.text(`Training: ${entry.trainingType} (${entry.duration}min, ${entry.intensity} intensity, ${entry.quality} quality)`, margin, yPosition);
-                    yPosition += 8;
-                    if (entry.steps) {
-                        doc.text(`  Steps: ${entry.steps}`, margin, yPosition);
-                        yPosition += 8;
-                    }
-                }
-                
-                // Mental health
-                if (entry.mood || entry.stress || entry.mentalHealth) {
-                    doc.text(`Mental: Mood ${entry.mood}/10, Stress ${entry.stress}/10, ${entry.mentalHealth}`, margin, yPosition);
-                    yPosition += 8;
-                    if (entry.moodTriggers && entry.moodTriggers !== 'None') {
-                        doc.text(`  Triggers: ${entry.moodTriggers}`, margin, yPosition);
-                        yPosition += 8;
-                    }
-                }
-                
-                // Activities
-                if (entry.outdoors || entry.coldExposure || entry.dogWalk) {
-                    doc.text(`Activities: ${entry.outdoors}min outdoors, ${entry.coldExposure}min cold, ${entry.dogWalk}min dog walk`, margin, yPosition);
-                    yPosition += 8;
-                }
-                
-                // Extras
-                if (entry.alcohol || entry.weedJoints || entry.weedBongs) {
-                    doc.text(`Substances: ${entry.alcohol} alcohol units, ${entry.weedJoints} joints, ${entry.weedBongs} bongs`, margin, yPosition);
-                    yPosition += 8;
-                }
-                
-                // Notes
-                if (entry.sleepNotes || entry.memoryNotes || entry.gratitude || entry.journalNotes) {
-                    doc.text('Notes:', margin, yPosition);
-                    yPosition += 8;
-                    if (entry.sleepNotes) {
-                        const sleepLines = doc.splitTextToSize(`Sleep: ${entry.sleepNotes}`, 150);
-                        doc.text(sleepLines, margin + 5, yPosition);
-                        yPosition += sleepLines.length * 6;
-                    }
-                    if (entry.memoryNotes) {
-                        const memoryLines = doc.splitTextToSize(`Memory: ${entry.memoryNotes}`, 150);
-                        doc.text(memoryLines, margin + 5, yPosition);
-                        yPosition += memoryLines.length * 6;
-                    }
-                    if (entry.gratitude) {
-                        const gratitudeLines = doc.splitTextToSize(`Gratitude: ${entry.gratitude}`, 150);
-                        doc.text(gratitudeLines, margin + 5, yPosition);
-                        yPosition += gratitudeLines.length * 6;
-                    }
-                    if (entry.journalNotes) {
-                        const journalLines = doc.splitTextToSize(`Journal: ${entry.journalNotes}`, 150);
-                        doc.text(journalLines, margin + 5, yPosition);
-                        yPosition += journalLines.length * 6;
-                    }
-                }
-                
-                // Add images
-                const allImages = [
-                    ...entry.images.sleep.map(img => ({...img, category: 'Sleep'})),
-                    ...entry.images.heart.map(img => ({...img, category: 'Heart'})),
-                    ...entry.images.exercise.map(img => ({...img, category: 'Exercise'})),
-                    ...entry.images.other.map(img => ({...img, category: 'Other'}))
-                ];
-                
-                if (allImages.length > 0) {
-                    doc.text('Screenshots:', margin, yPosition);
-                    yPosition += 8;
                     
-                    allImages.forEach(image => {
-                        if (yPosition > pageHeight - 80) {
-                            doc.addPage();
-                            yPosition = 20;
-                        }
+                    try {
+                        doc.setFontSize(8);
+                        doc.text(`${image.category}: ${image.name}`, margin, yPosition);
+                        yPosition += 6;
                         
-                        try {
-                            doc.setFontSize(8);
-                            doc.text(`${image.category}: ${image.name}`, margin, yPosition);
-                            yPosition += 6;
-                            
-                            doc.addImage(image.data, 'JPEG', margin, yPosition, 80, 60);
-                            yPosition += 70;
-                        } catch (error) {
-                            console.error('Error adding image:', error);
-                            doc.text(`Error loading image: ${image.name}`, margin, yPosition);
-                            yPosition += 8;
-                        }
-                    });
-                }
-                
-                yPosition += 15;
-            });
+                        doc.addImage(image.data, 'JPEG', margin, yPosition, 80, 60);
+                        yPosition += 70;
+                    } catch (error) {
+                        console.error('Error adding image:', error);
+                        doc.text(`Error loading image: ${image.name}`, margin, yPosition);
+                        yPosition += 8;
+                    }
+                });
+            }
             
             doc.save(`wellness-report-${currentDate}.pdf`);
             showToast('Today\'s PDF report generated', 'success');

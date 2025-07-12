@@ -1708,7 +1708,7 @@
                 }
             }
             
-            // Add images for the selected date
+            // Add images for the selected date - one page per image
             const allImages = [
                 ...formData.images.sleep.map(img => ({...img, category: 'Sleep'})),
                 ...formData.images.heart.map(img => ({...img, category: 'Heart'})),
@@ -1717,24 +1717,68 @@
             ];
             
             if (allImages.length > 0) {
-                doc.text('Screenshots:', margin, yPosition);
-                yPosition += 8;
+                // Add a separator page before images
+                doc.addPage();
+                yPosition = 20;
                 
-                allImages.forEach(image => {
-                    if (yPosition > pageHeight - 80) {
+                doc.setFontSize(16);
+                doc.text('Screenshots & Images', margin, yPosition);
+                yPosition += 20;
+                
+                doc.setFontSize(10);
+                doc.text(`Date: ${selectedDate}`, margin, yPosition);
+                yPosition += 15;
+                
+                allImages.forEach((image, index) => {
+                    // Add a new page for each image
+                    if (index > 0) {
                         doc.addPage();
                         yPosition = 20;
                     }
                     
                     try {
-                        doc.setFontSize(8);
-                        doc.text(`${image.category}: ${image.name}`, margin, yPosition);
-                        yPosition += 6;
+                        // Image title
+                        doc.setFontSize(14);
+                        doc.text(`${image.category} Screenshot`, margin, yPosition);
+                        yPosition += 8;
                         
-                        doc.addImage(image.data, 'JPEG', margin, yPosition, 80, 60);
-                        yPosition += 70;
+                        doc.setFontSize(10);
+                        doc.text(`Date: ${selectedDate}`, margin, yPosition);
+                        yPosition += 8;
+                        
+                        doc.text(`File: ${image.name}`, margin, yPosition);
+                        yPosition += 15;
+                        
+                        // Calculate image dimensions to fit on page while maintaining aspect ratio
+                        const pageWidth = doc.internal.pageSize.width;
+                        const pageHeight = doc.internal.pageSize.height;
+                        const maxWidth = pageWidth - (margin * 2);
+                        const maxHeight = pageHeight - yPosition - margin;
+                        
+                        // Create a temporary image to get dimensions
+                        const tempImg = new Image();
+                        tempImg.src = image.data;
+                        
+                        // For now, use a reasonable size that should work for most images
+                        // The image will be scaled to fit within the page bounds
+                        const imageWidth = Math.min(maxWidth, 160); // Larger than before
+                        const imageHeight = Math.min(maxHeight, 200); // Larger than before
+                        
+                        // Center the image horizontally
+                        const imageX = margin + (maxWidth - imageWidth) / 2;
+                        
+                        doc.addImage(image.data, 'JPEG', imageX, yPosition, imageWidth, imageHeight);
+                        
+                        // Add some space after the image
+                        yPosition += imageHeight + 20;
+                        
+                        // Add page number
+                        doc.setFontSize(8);
+                        doc.text(`Page ${doc.getCurrentPageInfo().pageNumber}`, pageWidth - 30, pageHeight - 10);
+                        
                     } catch (error) {
                         console.error('Error adding image:', error);
+                        doc.setFontSize(10);
                         doc.text(`Error loading image: ${image.name}`, margin, yPosition);
                         yPosition += 8;
                     }

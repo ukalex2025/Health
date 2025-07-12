@@ -1440,13 +1440,13 @@
                     <div class="entry-stats">
                         <span class="stat-item">🏷️ ${entry.tag}</span>
                         <span class="stat-item">📋 ${entry.protocol}</span>
-                        <span class="stat-item">😴 ${formatSleepTime(entry.sleepHours, entry.sleepMinutes)} (${entry.sleepQuality})</span>
-                        <span class="stat-item">⚖️ ${entry.weight}kg</span>
-                        <span class="stat-item">🏃 ${entry.trainingType}</span>
-                        <span class="stat-item">💧 ${entry.water}L</span>
+                        <span class="stat-item">😴 ${formatSleepTime(entry.sleepHours, entry.sleepMinutes) || 'No sleep data'} (${entry.sleepQuality || 'No quality'})</span>
+                        <span class="stat-item">⚖️ ${entry.weight || 'No weight'}kg</span>
+                        <span class="stat-item">🏃 ${entry.trainingType || 'No training'}</span>
+                        <span class="stat-item">💧 ${entry.water || 'No water'}L</span>
                         <span class="stat-item">📸 ${totalImages} images</span>
-                        <span class="stat-item">😊 ${entry.mood}/10</span>
-                        <span class="stat-item">😰 ${entry.stress}/10</span>
+                        <span class="stat-item">😊 ${entry.mood || 'No mood'}/10</span>
+                        <span class="stat-item">😰 ${entry.stress || 'No stress'}/10</span>
                     </div>
                 `;
                 
@@ -1482,6 +1482,22 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
+            // Get current date for filtering
+            const currentDate = new Date().toISOString().split('T')[0];
+            
+            // Ask user what to export
+            const exportAll = confirm('Export all entries? Click "Cancel" to export only today\'s data.');
+            
+            let filteredEntries = entries;
+            if (!exportAll) {
+                // Only export current day's data
+                filteredEntries = entries.filter(entry => entry.date === currentDate);
+                if (filteredEntries.length === 0) {
+                    showToast('No entries found for today', 'error');
+                    return;
+                }
+            }
+            
             let yPosition = 20;
             const pageHeight = doc.internal.pageSize.height;
             const margin = 20;
@@ -1493,13 +1509,17 @@
             
             // Date range
             doc.setFontSize(12);
+            const dateRange = exportAll ? 'All Entries' : `Today (${currentDate})`;
+            doc.text(`Date Range: ${dateRange}`, margin, yPosition);
+            yPosition += 10;
+            
             doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPosition);
             yPosition += 10;
-            doc.text(`Total Entries: ${entries.length}`, margin, yPosition);
+            doc.text(`Total Entries: ${filteredEntries.length}`, margin, yPosition);
             yPosition += 20;
             
             // Process entries
-            entries.slice(0, 10).forEach((entry, index) => {
+            filteredEntries.forEach((entry, index) => {
                 if (yPosition > pageHeight - 150) {
                     doc.addPage();
                     yPosition = 20;
@@ -1516,9 +1536,10 @@
                 yPosition += 8;
                 
                 // Sleep
-                if (entry.sleepHours || entry.sleepQuality) {
+                if (entry.sleepHours || entry.sleepMinutes || entry.sleepQuality) {
                     const sleepTime = formatSleepTime(entry.sleepHours, entry.sleepMinutes);
-                    doc.text(`Sleep: ${sleepTime} (${entry.sleepQuality})`, margin, yPosition);
+                    const sleepDisplay = sleepTime ? `${sleepTime} (${entry.sleepQuality || 'No quality'})` : `No time data (${entry.sleepQuality || 'No quality'})`;
+                    doc.text(`Sleep: ${sleepDisplay}`, margin, yPosition);
                     yPosition += 8;
                 }
                 
@@ -1692,7 +1713,7 @@
         }
 
         function formatSleepTime(hours, minutes) {
-            if (!hours && !minutes) return 'N/A';
+            if (!hours && !minutes) return '';
             if (hours && !minutes) return `${hours}h`;
             if (!hours && minutes) return `${minutes}m`;
             return `${hours}h ${minutes}m`;

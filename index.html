@@ -58,6 +58,27 @@
             align-items: center;
         }
 
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .refresh-btn {
+            background: var(--accent-color);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .refresh-btn:hover {
+            opacity: 0.8;
+        }
+
         .app-title {
             font-size: 20px;
             font-weight: 600;
@@ -589,12 +610,15 @@
     </style>
 </head>
 <body>
-    <div class="app-header">
-        <h1 class="app-title">💪 Wellness Tracker</h1>
-        <div class="status-indicator" id="status">
-            <span id="status-text">Online</span>
+            <div class="app-header">
+            <h1 class="app-title">💪 Wellness Tracker</h1>
+            <div class="header-controls">
+                <button class="refresh-btn" onclick="forceRefresh()" title="Force refresh app">🔄</button>
+                <div class="status-indicator" id="status">
+                    <span id="status-text">Online</span>
+                </div>
+            </div>
         </div>
-    </div>
 
     <div class="install-banner" id="install-banner">
         <div class="install-text">📱 Install this app for a better experience!</div>
@@ -1098,9 +1122,24 @@
 
         function registerServiceWorker() {
             if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.register('sw.js')
-                    .then(registration => console.log('SW registered'))
-                    .catch(error => console.log('SW registration failed'));
+                // Add cache-busting parameter to force service worker update
+                navigator.serviceWorker.register('sw.js?v=' + Date.now())
+                    .then(registration => {
+                        console.log('SW registered');
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            console.log('Service Worker update found');
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    console.log('New service worker installed, reloading...');
+                                    window.location.reload();
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => console.log('SW registration failed:', error));
             }
         }
 
@@ -1482,6 +1521,31 @@
             document.getElementById('location-status').innerHTML = '';
             document.getElementById('location-display').style.display = 'none';
             showToast('Location cleared', 'success');
+        }
+
+        function forceRefresh() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(registrations => {
+                    for (let registration of registrations) {
+                        registration.unregister();
+                    }
+                }).then(() => {
+                    // Clear all caches
+                    if ('caches' in window) {
+                        caches.keys().then(cacheNames => {
+                            return Promise.all(
+                                cacheNames.map(cacheName => {
+                                    return caches.delete(cacheName);
+                                })
+                            );
+                        });
+                    }
+                    // Reload the page
+                    window.location.reload(true);
+                });
+            } else {
+                window.location.reload(true);
+            }
         }
 
         function copyLastEntry() {

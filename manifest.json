@@ -1,0 +1,39 @@
+{
+  "name": "Wellness Tracker PWA",
+  "short_name": "Wellness",
+  "description": "Personal wellness and health tracking app with offline support",
+  "start_url": "/wellness-tracker.html",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#4a90e2",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' fill='%23121212'/><text y='96' x='96' text-anchor='middle' dominant-baseline='middle' font-size='120' fill='%234a90e2'>💪</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%23121212'/><text y='256' x='256' text-anchor='middle' dominant-baseline='middle' font-size='320' fill='%234a90e2'>💪</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["health", "fitness", "lifestyle", "productivity"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 390 844'><rect width='390' height='844' fill='%23121212'/><text y='100' x='195' text-anchor='middle' font-size='24' fill='%234a90e2'>Wellness Tracker</text><text y='150' x='195' text-anchor='middle' font-size='16' fill='%23e0e0e0'>Track sleep, exercise, mood</text><text y='200' x='195' text-anchor='middle' font-size='16' fill='%23e0e0e0'>Upload screenshots</text><text y='250' x='195' text-anchor='middle' font-size='16' fill='%23e0e0e0'>Generate PDF reports</text></svg>",
+      "sizes": "390x844",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    }
+  ],
+  "lang": "en",
+  "scope": "/",
+  "features": [
+    "offline-support",
+    "camera-access",
+    "file-system-access",
+    "local-storage"
+  ]
+} 

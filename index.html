@@ -198,7 +198,7 @@
             font-size: 16px;
         }
 
-        .camera-controls {
+        .camera-controls, .location-controls {
             display: flex;
             gap: 12px;
             justify-content: center;
@@ -642,6 +642,29 @@
 
     <div class="container">
         <div class="section-header">
+            <h2>📍 Location</h2>
+            <button class="collapse-btn" onclick="toggleSection('location-section')">▼</button>
+        </div>
+        <div class="section-content" id="location-section">
+            <div class="form-group">
+                <label>GPS Location</label>
+                <div class="location-controls">
+                    <button type="button" class="camera-btn" onclick="getCurrentLocation()">📍 Get Current Location</button>
+                    <button type="button" class="camera-btn" onclick="clearLocation()">🗑️ Clear Location</button>
+                </div>
+                <div id="location-status" style="margin-top: 10px; font-size: 14px; color: var(--text-color);"></div>
+                <div id="location-display" style="margin-top: 10px; padding: 10px; background: var(--input-bg); border-radius: 8px; display: none;">
+                    <div><strong>Latitude:</strong> <span id="latitude-display"></span></div>
+                    <div><strong>Longitude:</strong> <span id="longitude-display"></span></div>
+                    <div><strong>Accuracy:</strong> <span id="accuracy-display"></span> meters</div>
+                    <div><strong>Address:</strong> <span id="address-display">Loading...</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="section-header">
             <h2>📸 Screenshots & Images</h2>
             <button class="collapse-btn" onclick="toggleSection('images-section')">▼</button>
         </div>
@@ -1028,9 +1051,7 @@
     </div>
 
     <div class="action-bar">
-        <button class="secondary-btn" onclick="saveEntry()">💾 Save Entry</button>
-        <button class="secondary-btn" onclick="exportData()">📤 Export</button>
-        <button class="secondary-btn" onclick="generateReport()">📄 PDF Report</button>
+        <button class="secondary-btn" onclick="generateReport()">📄 Export PDF</button>
     </div>
 
     <div class="toast" id="toast">
@@ -1343,6 +1364,9 @@
                 weedJoints: document.getElementById('weed-joints').value,
                 weedBongs: document.getElementById('weed-bongs').value,
                 
+                // Location
+                location: currentLocation,
+                
                 timestamp: new Date().toISOString(),
                 images: {
                     sleep: imageStore.sleep.filter(img => img.date === document.getElementById('date').value),
@@ -1367,6 +1391,97 @@
             renderEntries();
             clearForm();
             showToast('Entry saved successfully', 'success');
+        }
+
+        // GPS Location functionality
+        let currentLocation = null;
+
+        function getCurrentLocation() {
+            const statusDiv = document.getElementById('location-status');
+            const displayDiv = document.getElementById('location-display');
+            
+            if (!navigator.geolocation) {
+                statusDiv.innerHTML = '❌ Geolocation is not supported by this browser.';
+                return;
+            }
+            
+            statusDiv.innerHTML = '📍 Getting your location...';
+            displayDiv.style.display = 'none';
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    currentLocation = {
+                        latitude: position.coords.latitude,
+                        longitude: position.coords.longitude,
+                        accuracy: position.coords.accuracy,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    // Display location data
+                    document.getElementById('latitude-display').textContent = currentLocation.latitude.toFixed(6);
+                    document.getElementById('longitude-display').textContent = currentLocation.longitude.toFixed(6);
+                    document.getElementById('accuracy-display').textContent = currentLocation.accuracy.toFixed(1);
+                    
+                    statusDiv.innerHTML = '✅ Location captured successfully!';
+                    displayDiv.style.display = 'block';
+                    
+                    // Get address from coordinates
+                    getAddressFromCoords(currentLocation.latitude, currentLocation.longitude);
+                    
+                    showToast('Location captured successfully', 'success');
+                },
+                function(error) {
+                    let errorMessage = '❌ Unable to get location: ';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            errorMessage += 'Permission denied. Please allow location access.';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            errorMessage += 'Location information unavailable.';
+                            break;
+                        case error.TIMEOUT:
+                            errorMessage += 'Location request timed out.';
+                            break;
+                        default:
+                            errorMessage += 'Unknown error occurred.';
+                            break;
+                    }
+                    statusDiv.innerHTML = errorMessage;
+                    showToast('Failed to get location', 'error');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 60000
+                }
+            );
+        }
+
+        function getAddressFromCoords(lat, lng) {
+            const addressDisplay = document.getElementById('address-display');
+            addressDisplay.textContent = 'Loading address...';
+            
+            // Use reverse geocoding to get address
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.display_name) {
+                        addressDisplay.textContent = data.display_name;
+                    } else {
+                        addressDisplay.textContent = 'Address not available';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error getting address:', error);
+                    addressDisplay.textContent = 'Address not available';
+                });
+        }
+
+        function clearLocation() {
+            currentLocation = null;
+            document.getElementById('location-status').innerHTML = '';
+            document.getElementById('location-display').style.display = 'none';
+            showToast('Location cleared', 'success');
         }
 
         function copyLastEntry() {
@@ -1590,6 +1705,9 @@
                 weedJoints: document.getElementById('weed-joints').value,
                 weedBongs: document.getElementById('weed-bongs').value,
                 
+                // Location
+                location: currentLocation,
+                
                 // Images for selected date
                 images: {
                     sleep: imageStore.sleep.filter(img => img.date === selectedDate),
@@ -1679,6 +1797,14 @@
             // Extras
             if (formData.alcohol || formData.weedJoints || formData.weedBongs) {
                 doc.text(`Substances: ${formData.alcohol || 'N/A'} alcohol units, ${formData.weedJoints || 'N/A'} joints, ${formData.weedBongs || 'N/A'} bongs`, margin, yPosition);
+                yPosition += 8;
+            }
+            
+            // Location
+            if (formData.location) {
+                doc.text(`Location: ${formData.location.latitude.toFixed(6)}, ${formData.location.longitude.toFixed(6)}`, margin, yPosition);
+                yPosition += 8;
+                doc.text(`Accuracy: ${formData.location.accuracy.toFixed(1)} meters`, margin, yPosition);
                 yPosition += 8;
             }
             

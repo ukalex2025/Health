@@ -6,6 +6,7 @@
     <title>Wellness Tracker PWA</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#121212">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Wellness Tracker">
@@ -1086,8 +1087,26 @@
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                document.getElementById('install-banner').classList.add('show');
+                // Show install banner after a short delay
+                setTimeout(() => {
+                    document.getElementById('install-banner').classList.add('show');
+                }, 2000);
             });
+        }
+
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        document.getElementById('install-banner').classList.remove('show');
+                        showToast('App installed successfully!', 'success');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                showToast('Installation not available', 'error');
+            }
         }
 
         function setupOfflineDetection() {
@@ -1112,18 +1131,6 @@
             } else {
                 statusEl.className = 'status-indicator status-offline';
                 statusText.textContent = 'Offline';
-            }
-        }
-
-        function installApp() {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        document.getElementById('install-banner').classList.remove('show');
-                    }
-                    deferredPrompt = null;
-                });
             }
         }
 
@@ -1493,7 +1500,13 @@
         }
 
         function generateReport() {
-            const { jsPDF } = window.jsPDF;
+            // Check if jsPDF is available
+            if (typeof window.jspdf === 'undefined') {
+                showToast('PDF library not loaded. Please refresh the page.', 'error');
+                return;
+            }
+            
+            const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
             // Get the date from the form (whatever date is selected)

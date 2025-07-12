@@ -1119,12 +1119,9 @@
 
         function loadData() {
             try {
-                const savedEntries = localStorage.getItem('wellness-entries-pwa');
+                // Don't load previous entries automatically - start fresh each time
+                // Only load images for current date
                 const savedImages = localStorage.getItem('wellness-images-pwa');
-                
-                if (savedEntries) {
-                    entries = JSON.parse(savedEntries);
-                }
                 
                 if (savedImages) {
                     imageStore = JSON.parse(savedImages);
@@ -1132,22 +1129,27 @@
                     renderAllImages();
                 }
                 
-                showToast(`Loaded ${entries.length} entries`, 'success');
+                // Start with empty entries array - no previous data loaded
+                entries = [];
+                
+                showToast('App ready - start fresh today!', 'success');
             } catch (error) {
                 console.error('Error loading data:', error);
                 showToast('Error loading data', 'error');
+                entries = [];
+                imageStore = { sleep: [], heart: [], exercise: [], other: [] };
             }
         }
 
         function saveData() {
             try {
+                // Only save current entry, not historical data
                 localStorage.setItem('wellness-entries-pwa', JSON.stringify(entries));
                 localStorage.setItem('wellness-images-pwa', JSON.stringify(imageStore));
-                return true;
+                console.log('Data saved successfully');
             } catch (error) {
                 console.error('Error saving data:', error);
-                showToast('Error saving data - storage full?', 'error');
-                return false;
+                showToast('Error saving data - storage might be full.', 'error');
             }
         }
 
@@ -1326,32 +1328,26 @@
             };
             
             if (!entryData.date) {
-                showToast('Please select a date', 'error');
+                showToast('Please select a date before adding.', 'error');
                 return;
             }
             
-            const existingIndex = entries.findIndex(e => e.date === entryData.date);
-            if (existingIndex !== -1) {
-                entries[existingIndex] = entryData;
-                showToast('Entry updated', 'success');
-            } else {
-                entries.push(entryData);
-                showToast('Entry saved', 'success');
-            }
+            // Replace any existing entry (only keep current entry)
+            entries = [entryData];
             
-            if (saveData()) {
-                renderEntries();
-                clearForm();
-            }
+            saveData();
+            renderEntries();
+            clearForm();
+            showToast('Entry saved successfully', 'success');
         }
 
         function copyLastEntry() {
             if (entries.length === 0) {
-                showToast('No entries to copy', 'error');
+                showToast('No previous entry to copy', 'error');
                 return;
             }
             
-            const lastEntry = entries[entries.length - 1];
+            const lastEntry = entries[0]; // Only one entry exists
             
             // Copy form data except date and images
             document.getElementById('date').value = new Date().toISOString().split('T')[0];
@@ -1408,7 +1404,7 @@
             document.getElementById('weed-joints').value = lastEntry.weedJoints || '';
             document.getElementById('weed-bongs').value = lastEntry.weedBongs || '';
             
-            showToast('Last entry copied', 'success');
+            showToast('Previous entry copied', 'success');
         }
 
         function clearForm() {
@@ -1427,31 +1423,33 @@
             const container = document.getElementById('entries-list');
             container.innerHTML = '';
             
-            const sortedEntries = [...entries].sort((a, b) => new Date(b.date) - new Date(a.date));
+            if (entries.length === 0) {
+                container.innerHTML = '<div class="entry-summary"><div class="entry-date">No entries yet</div><div class="entry-stats"><span class="stat-item">Start by filling out today\'s data and saving</span></div></div>';
+                return;
+            }
             
-            sortedEntries.slice(0, 10).forEach(entry => {
-                const entryEl = document.createElement('div');
-                entryEl.className = 'entry-summary';
-                
-                const totalImages = Object.values(entry.images).reduce((sum, imgs) => sum + imgs.length, 0);
-                
-                entryEl.innerHTML = `
-                    <div class="entry-date">${new Date(entry.date).toLocaleDateString()}</div>
-                    <div class="entry-stats">
-                        <span class="stat-item">🏷️ ${entry.tag}</span>
-                        <span class="stat-item">📋 ${entry.protocol}</span>
-                        <span class="stat-item">😴 ${formatSleepTime(entry.sleepHours, entry.sleepMinutes) || 'No sleep data'} (${entry.sleepQuality || 'No quality'})</span>
-                        <span class="stat-item">⚖️ ${entry.weight || 'No weight'}kg</span>
-                        <span class="stat-item">🏃 ${entry.trainingType || 'No training'}</span>
-                        <span class="stat-item">💧 ${entry.water || 'No water'}L</span>
-                        <span class="stat-item">📸 ${totalImages} images</span>
-                        <span class="stat-item">😊 ${entry.mood || 'No mood'}/10</span>
-                        <span class="stat-item">😰 ${entry.stress || 'No stress'}/10</span>
-                    </div>
-                `;
-                
-                container.appendChild(entryEl);
-            });
+            // Only show today's entry
+            const todayEntry = entries[0]; // Since we only keep current entry
+            const totalImages = Object.values(todayEntry.images).reduce((sum, imgs) => sum + imgs.length, 0);
+            
+            const entryEl = document.createElement('div');
+            entryEl.className = 'entry-summary';
+            entryEl.innerHTML = `
+                <div class="entry-date">${new Date(todayEntry.date).toLocaleDateString()}</div>
+                <div class="entry-stats">
+                    <span class="stat-item">🏷️ ${todayEntry.tag}</span>
+                    <span class="stat-item">📋 ${todayEntry.protocol}</span>
+                    <span class="stat-item">😴 ${formatSleepTime(todayEntry.sleepHours, todayEntry.sleepMinutes) || 'No sleep data'} (${todayEntry.sleepQuality || 'No quality'})</span>
+                    <span class="stat-item">⚖️ ${todayEntry.weight || 'No weight'}kg</span>
+                    <span class="stat-item">🏃 ${todayEntry.trainingType || 'No training'}</span>
+                    <span class="stat-item">💧 ${todayEntry.water || 'No water'}L</span>
+                    <span class="stat-item">📸 ${totalImages} images</span>
+                    <span class="stat-item">😊 ${todayEntry.mood || 'No mood'}/10</span>
+                    <span class="stat-item">😰 ${todayEntry.stress || 'No stress'}/10</span>
+                </div>
+            `;
+            
+            container.appendChild(entryEl);
         }
 
         function exportData() {

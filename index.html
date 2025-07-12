@@ -1482,20 +1482,14 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             
-            // Get current date for filtering
+            // Get current date for filtering - ONLY today's data
             const currentDate = new Date().toISOString().split('T')[0];
             
-            // Ask user what to export
-            const exportAll = confirm('Export all entries? Click "Cancel" to export only today\'s data.');
-            
-            let filteredEntries = entries;
-            if (!exportAll) {
-                // Only export current day's data
-                filteredEntries = entries.filter(entry => entry.date === currentDate);
-                if (filteredEntries.length === 0) {
-                    showToast('No entries found for today', 'error');
-                    return;
-                }
+            // Only export current day's data
+            const filteredEntries = entries.filter(entry => entry.date === currentDate);
+            if (filteredEntries.length === 0) {
+                showToast('No entries found for today', 'error');
+                return;
             }
             
             let yPosition = 20;
@@ -1509,13 +1503,12 @@
             
             // Date range
             doc.setFontSize(12);
-            const dateRange = exportAll ? 'All Entries' : `Today (${currentDate})`;
-            doc.text(`Date Range: ${dateRange}`, margin, yPosition);
+            doc.text(`Date: ${currentDate}`, margin, yPosition);
             yPosition += 10;
             
             doc.text(`Generated: ${new Date().toLocaleDateString()}`, margin, yPosition);
             yPosition += 10;
-            doc.text(`Total Entries: ${filteredEntries.length}`, margin, yPosition);
+            doc.text(`Today's Entry`, margin, yPosition);
             yPosition += 20;
             
             // Process entries
@@ -1667,8 +1660,8 @@
                 yPosition += 15;
             });
             
-            doc.save(`wellness-report-${new Date().toISOString().split('T')[0]}.pdf`);
-            showToast('Comprehensive PDF report generated', 'success');
+            doc.save(`wellness-report-${currentDate}.pdf`);
+            showToast('Today\'s PDF report generated', 'success');
         }
 
         function showToast(message, type = 'success') {

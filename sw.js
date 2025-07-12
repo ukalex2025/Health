@@ -1,8 +1,9 @@
 // Wellness Tracker Service Worker
 const CACHE_NAME = 'wellness-tracker-v1';
 const urlsToCache = [
-    '/wellness-tracker.html',
-    '/manifest.json',
+    './',
+    './index.html',
+    './manifest.json',
     'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
 ];
 
@@ -12,7 +13,11 @@ self.addEventListener('install', event => {
         caches.open(CACHE_NAME)
             .then(cache => {
                 console.log('Opened cache');
-                return cache.addAll(urlsToCache);
+                return cache.addAll(urlsToCache).catch(error => {
+                    console.log('Cache addAll failed:', error);
+                    // Continue even if some resources fail to cache
+                    return Promise.resolve();
+                });
             })
     );
 });
@@ -24,6 +29,11 @@ self.addEventListener('fetch', event => {
             .then(response => {
                 // Return cached version or fetch from network
                 return response || fetch(event.request);
+            })
+            .catch(error => {
+                console.log('Fetch failed:', error);
+                // Fallback to network request
+                return fetch(event.request);
             })
     );
 });

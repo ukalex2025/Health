@@ -1030,6 +1030,7 @@
         <button class="secondary-btn" onclick="saveEntry()">💾 Save Entry</button>
         <button class="secondary-btn" onclick="exportData()">📤 Export</button>
         <button class="secondary-btn" onclick="generateReport()">📄 PDF Report</button>
+        <button class="secondary-btn" onclick="debugState()" style="background: #ff4444;">🐛 Debug</button>
     </div>
 
     <div class="toast" id="toast">
@@ -1052,10 +1053,26 @@
         });
 
         function initializeApp() {
-            document.getElementById('date').value = new Date().toISOString().split('T')[0];
+            // Set today's date as default
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('date').value = today;
+            
             loadData();
             renderEntries();
             updateStatus();
+        }
+
+        // Debug function to check current state
+        function debugState() {
+            console.log('=== DEBUG STATE ===');
+            console.log('Entries:', entries);
+            console.log('Current date:', new Date().toISOString().split('T')[0]);
+            console.log('Date input value:', document.getElementById('date').value);
+            if (entries.length > 0) {
+                console.log('Saved entry date:', entries[0].date);
+                console.log('Date match:', entries[0].date === new Date().toISOString().split('T')[0]);
+            }
+            console.log('==================');
         }
 
         function registerServiceWorker() {
@@ -1329,6 +1346,9 @@
                 }
             };
             
+            console.log('Saving entry with date:', entryData.date);
+            console.log('Current date:', new Date().toISOString().split('T')[0]);
+            
             if (!entryData.date) {
                 showToast('Please select a date before adding.', 'error');
                 return;
@@ -1487,8 +1507,14 @@
             
             // Check if the saved entry is for today
             const todayEntry = entries[0]; // Only one entry exists
-            if (todayEntry.date !== currentDate) {
-                showToast('No entries found for today', 'error');
+            
+            console.log('Current date:', currentDate);
+            console.log('Entry date:', todayEntry.date);
+            console.log('Entry:', todayEntry);
+            
+            // More flexible date checking - check if entry exists and has today's date
+            if (!todayEntry || !todayEntry.date || todayEntry.date !== currentDate) {
+                showToast(`No entries found for today (${currentDate}). Entry date: ${todayEntry?.date || 'none'}`, 'error');
                 return;
             }
             
